@@ -1,0 +1,107 @@
+; Miscellanious utility functions
+; all of these should probably be moved into proper modules
+; at some point.
+;
+(define foreach)
+(define foreach
+  (lambda (xs f)
+    (if (null? xs)
+      '()
+      (begin
+        (f (car xs))
+        (foreach (cdr xs) f)))))
+
+
+(define until
+  (lambda (token f arg)
+    (define c (f arg))
+    (if (eq? c token)
+      '()
+      (cons c (until token f arg)))))
+
+; todo: move to 'strings module
+(define str-iter
+  (lambda (str)
+    (iterator
+      (lambda (n) (string-ref str n))
+      (string-length str))))
+
+; todo: move this to dedicated 'sockets module
+(define tcp-writestr
+  (lambda (sock str)
+    (foreach (str-iter str)
+      (lambda (c)
+        (tcp-putchar sock c)))))
+
+(define list-equal?
+  (lambda (xs ys)
+    (or (and (null? xs) (null? ys))
+        (and (and (and
+          (not (null? xs))
+          (not (null? ys)))
+          (eq? (car xs) (car ys)))
+          (list-equal? (cdr xs) (cdr ys))))))
+
+(define list-replace
+  (lambda (xs old new)
+    (if (null? xs)
+      '()
+    (if (eq? (car xs) old)
+      (cons new (list-replace (cdr xs) old new))
+     else
+      (cons (car xs) (list-replace (cdr xs) old new))))))
+
+(define delim
+  (lambda (xs token)
+    (if (null? xs)
+      '()
+    (if (eq? (car xs) token)
+      '()
+      (cons (car xs) (delim (cdr xs) token))))))
+
+(define after
+  (lambda (xs token)
+    (if (null? xs)
+      '()
+    (if (eq? (car xs) token)
+      (cdr xs)
+     else
+      (after (cdr xs) token)))))
+
+(define list-split
+  (lambda (xs token)
+    (if (null? xs)
+      '()
+      (cons (delim xs token) (list-split (after xs token) token)))))
+
+(define string-split
+  (lambda (str token)
+    (map list->string (list-split (str-iter str) token))))
+
+
+(define list-ref
+  (lambda (xs n)
+    (if (null? xs)
+      '()
+    (if (eq? n 0)
+      (car xs)
+      (list-ref (cdr xs) (- n 1))))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
