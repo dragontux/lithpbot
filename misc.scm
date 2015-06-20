@@ -81,7 +81,6 @@
   (lambda (str token)
     (map list->string (list-split (str-iter str) token))))
 
-
 (define list-ref
   (lambda (xs n)
     (if (null? xs)
@@ -93,3 +92,7 @@
 (define cadr
   (lambda (xs)
     (car (cdr xs))))
+
+(define ident
+  (lambda (x)
+    x))

@@ -33,30 +33,88 @@
     (display "[ ] Joining ") (print chan)
     (irc-join serv chan)))
 
-(foreach [iota 100]
-         (lambda (n)
-           (define message (until #\return tcp-getchar (assq :socket (cdr serv))))
-           (tcp-getchar (assq :socket (cdr serv))) ; just ignore the newline character
+(define parse-irc-message
+  (lambda (msg)
+     (define split (list-split msg #\ ))
 
-           (if (list-equal? (take message 4) (str-iter "PING"))
-             (begin
-               (display "[ ] Got ping: ")
-               (print message)
-               (irc-rawmsg serv (list->string (list-replace message #\I #\O))))
-             (begin
-               (display "    ")
-               (define split (list-split message #\ ))
-               (define channel      (list-ref split 2))
-               (define user-message (list-ref split 3))
+     (list
+       (list :channel   (list-ref split 2))
+       (list :message   (after (after msg #\:) #\:))
+       (list :who       (car split))
+       (list :action    (cadr split))
 
-               (map display (list channel " " user-message))
+       (list :nick      (after (delim (car split) #\!) #\:))
+       (list :host      (after (car split) #\@)))
+     ))
 
-               (if (list-equal? user-message (str-iter ":.bots"))
-                 (irc-privmsg serv (list->string channel) "Reporting in! [Scheme]")
-                 'uwot)
+(define irc-field
+  (lambda (msg val)
+    (list->string (assq val msg))))
 
-               ;(display (list->string (take message 60)))
-               (print "..."))
-           )))
+(define irc-replyto
+  (lambda (msg)
+    (if (eq? (car (assq :channel msg)) #\#)
+      (list->string (assq :channel msg))
+      (list->string (assq :nick msg)))))
 
-(map (lambda (n) (intern-sleep) (print n)) [iota 100])
+(define command-list
+  (list (list ".bots"
+              (lambda (msg)
+                (irc-privmsg serv (irc-replyto msg) "Reporting in! [Scheme]")))
+        (list ".source"
+              (lambda (msg)
+                (irc-privmsg serv (irc-replyto msg) "[todo] insert source link here")))
+        (list ".command_test"
+              (lambda (msg)
+                (define args (list-split (after (assq :message msg) #\ ) #\ ))
+
+                (irc-privmsg serv (irc-replyto msg)
+                             "Testing, systems be nominal. Args list: ")
+
+                (foreach args
+                  (lambda (arg)
+                    (irc-privmsg serv (irc-replyto msg) (list->string arg))))))
+
+        (list ".whoami"
+              (lambda (msg)
+                (irc-privmsg serv (irc-replyto msg)
+                             (string-append "Hey there, your host is "
+                                            (list->string (assq :host msg))))))
+        (list "VERSION"
+              (lambda (msg)
+                (irc-notice serv (irc-field msg :nick)
+                            "VERSION Some IRC bot, written in lisp")))
+        ))
+
+
+(foreach [iterator ident] ; loop forever, generates an infinite list
+  (lambda (n)
+    (define message (until #\return tcp-getchar (assq :socket (cdr serv))))
+    (tcp-getchar (assq :socket (cdr serv))) ; just ignore the newline character
+    (map display (list "message " n ": "))
+
+    (if (equal? (take message 4) (str-iter "PING"))
+      (begin
+        (display "[ ] Got ping: ")
+        (print message)
+        (irc-rawmsg serv (list->string (list-replace message #\I #\O))))
+
+      (begin
+        (define parsed (parse-irc-message message))
+
+        (display "    ")
+        (map display (list (list->string (assq :nick parsed))
+                           "@"
+                           (list->string (assq :host parsed))
+                           ": "
+                           (list->string (assq :action parsed))))
+        (print "")
+
+        (if (not (null? (assq :message parsed)))
+          (foreach command-list
+                   (lambda (command)
+                     (if (equal? (map ident (str-iter (car command)))
+                                 (take (assq :message parsed) (string-length (car command))))
+                       ((cadr command) parsed)
+                       'uwot)))
+          'm8)))))
