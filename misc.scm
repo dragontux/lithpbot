@@ -33,14 +33,17 @@
       (lambda (c)
         (tcp-putchar sock c)))))
 
-(define list-equal?
+(define equal?
   (lambda (xs ys)
-    (or (and (null? xs) (null? ys))
+    (if (list? xs)
+      (or (and (null? xs) (null? ys))
         (and (and (and
           (not (null? xs))
           (not (null? ys)))
-          (eq? (car xs) (car ys)))
-          (list-equal? (cdr xs) (cdr ys))))))
+          (equal? (car xs) (car ys)))
+          (equal? (cdr xs) (cdr ys))))
+     else
+      (eq? xs ys))))
 
 (define list-replace
   (lambda (xs old new)
@@ -87,21 +90,6 @@
       (car xs)
       (list-ref (cdr xs) (- n 1))))))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+(define cadr
+  (lambda (xs)
+    (car (cdr xs))))
