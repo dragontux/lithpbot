@@ -1,5 +1,5 @@
 #!/usr/bin/env gojira
-(import! 'srfi1)
+(import! 'lists)
 
 ; todo: move this to seperate configuration file
 (define config
@@ -25,7 +25,7 @@
 (print "[ ] Connected to server.")
 (display "[ ] Have server: ") (print serv)
 
-(irc-privmsg serv "NickServ" "identify *****")
+(irc-privmsg serv "NickServ" "identify shitpass")
 (foreach [iota 5] intern-sleep)
 
 (foreach (assq :channels config)
@@ -57,14 +57,28 @@
       (list->string (assq :channel msg))
       (list->string (assq :nick msg)))))
 
+(define str-concat
+  (lambda (xs)
+    (if (null? xs)
+      ""
+      (string-append (car xs) (str-concat (cdr xs))))))
+
 (define command-list
   (list (list ".bots"
               (lambda (msg)
-                (irc-privmsg serv (irc-replyto msg) "Reporting in! [Scheme]")))
-        (list ".source"
+                (irc-privmsg serv (irc-replyto msg) "Reporting in! [Scheme] try ,help")))
+
+        (list ",source"
               (lambda (msg)
                 (irc-privmsg serv (irc-replyto msg) "[todo] insert source link here")))
-        (list ".command_test"
+
+        (list ",help"
+              (lambda (msg)
+                (irc-privmsg serv (irc-replyto msg)
+                             (str-concat
+                               (list (irc-field msg :nick) ": sorry, I don't have a help command at the moment...")))))
+
+        (list ",command_test"
               (lambda (msg)
                 (define args (list-split (after (assq :message msg) #\ ) #\ ))
 
@@ -75,15 +89,22 @@
                   (lambda (arg)
                     (irc-privmsg serv (irc-replyto msg) (list->string arg))))))
 
-        (list ".whoami"
+        (list ",whoami"
               (lambda (msg)
                 (irc-privmsg serv (irc-replyto msg)
                              (string-append "Hey there, your host is "
                                             (list->string (assq :host msg))))))
+
+        (list ",maw"
+              (lambda (msg)
+                (irc-privmsg serv (irc-replyto msg)
+                             (str-concat
+                               (list (irc-field msg :nick) ": marf \\(^~^ )7")))))
+
         (list "VERSION"
               (lambda (msg)
                 (irc-notice serv (irc-field msg :nick)
-                            "VERSION Some IRC bot, written in lisp")))
+                            "VERSION I'm an irc bot")))
         ))
 
 

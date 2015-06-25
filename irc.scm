@@ -1,4 +1,4 @@
-(import! 'srfi1)
+(import! 'lists)
 
 (define crlf (list->string '(#\return #\newline)))
 
