@@ -93,6 +93,10 @@
   (lambda (xs)
     (car (cdr xs))))
 
+(define cddr
+  (lambda (xs)
+    (cdr (cdr xs))))
+
 (define ident
   (lambda (x)
     x))

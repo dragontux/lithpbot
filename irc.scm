@@ -49,6 +49,11 @@
     (tcp-sendstrings (assq :socket (cdr serv))
       (list "JOIN " channel crlf))))
 
+(define irc-part
+  (lambda (serv channel)
+    (tcp-sendstrings (assq :socket (cdr serv))
+      (list "PART " channel crlf))))
+
 (define irc-rawmsg
   (lambda (serv str)
     (tcp-writestr (assq :socket (cdr serv)) str)

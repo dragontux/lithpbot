@@ -6,10 +6,11 @@
    '((:server   "irc.rizon.net")
      (:port     6667)
      (:nick     "cpt_ahab")
-     (:channels ("#/g/bots"))))
+     (:channels ("#cpt_ahab"))))
 
 (map load! '("misc.scm"
-             "irc.scm"))
+             "irc.scm"
+             "manage.scm"))
 
 (print "hello, world!")
 (print "[ ] Starting irc bot.")
@@ -25,7 +26,8 @@
 (print "[ ] Connected to server.")
 (display "[ ] Have server: ") (print serv)
 
-(irc-privmsg serv "NickServ" "identify shitpass")
+(irc-privmsg serv "NickServ"
+             (string-append "identify " (readall (open "./passfile" "r"))))
 (foreach [iota 5] intern-sleep)
 
 (foreach (assq :channels config)
@@ -66,7 +68,7 @@
 (define command-list
   (list (list ".bots"
               (lambda (msg)
-                (irc-privmsg serv (irc-replyto msg) "Reporting in! [Scheme] try ,help")))
+                (irc-privmsg serv (irc-replyto msg) "Reporting in! [4Scheme] try ,help")))
 
         (list ",source"
               (lambda (msg)
@@ -100,6 +102,8 @@
                 (irc-privmsg serv (irc-replyto msg)
                              (str-concat
                                (list (irc-field msg :nick) ": marf \\(^~^ )7")))))
+
+        (list ",manage" bot-manage)
 
         (list "VERSION"
               (lambda (msg)
