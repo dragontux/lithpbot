@@ -18,7 +18,7 @@
 (define irc-connect
   (lambda (host port config)
     (define sock (tcp-socket host port))
-    (define nick (assq :nick config))
+    (define nick (config :nick))
 
     (list 'irc-server
           (list :socket sock)
@@ -53,6 +53,11 @@
   (lambda (serv channel)
     (tcp-sendstrings (assq :socket (cdr serv))
       (list "PART " channel crlf))))
+
+(define irc-quit
+  (lambda (serv)
+    (tcp-sendstrings (assq :socket (cdr serv))
+      (list "QUIT :foo" crlf))))
 
 (define irc-rawmsg
   (lambda (serv str)

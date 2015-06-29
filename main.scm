@@ -3,10 +3,11 @@
 
 ; todo: move this to seperate configuration file
 (define config
-   '((:server   "irc.rizon.net")
-     (:port     6667)
-     (:nick     "cpt_ahab")
-     (:channels ("#cpt_ahab"))))
+  (hashmap
+    :server   "irc.rizon.net"
+    :port     6667
+    :nick     "cpt_ahab"
+    :channels '("#cpt_ahab")))
 
 (map load! '("misc.scm"
              "irc.scm"
@@ -16,21 +17,22 @@
 (print "[ ] Starting irc bot.")
 
 (define serv (irc-connect
-               (assq :server config)
-               (assq :port   config)
+               (config :server)
+               (config :port)
                config))
 
-(irc-user serv (assq :nick config))
-(irc-nick serv (assq :nick config))
+(irc-user serv (config :nick))
+(irc-nick serv (config :nick))
 
 (print "[ ] Connected to server.")
 (display "[ ] Have server: ") (print serv)
 
+;(irc-privmsg serv "NickServ" "identify shitpass")
 (irc-privmsg serv "NickServ"
              (string-append "identify " (readall (open "./passfile" "r"))))
 (foreach [iota 5] intern-sleep)
 
-(foreach (assq :channels config)
+(foreach (config :channels)
   (lambda (chan)
     (display "[ ] Joining ") (print chan)
     (irc-join serv chan)))
@@ -39,25 +41,23 @@
   (lambda (msg)
      (define split (list-split msg #\ ))
 
-     (list
-       (list :channel   (list-ref split 2))
-       (list :message   (after (after msg #\:) #\:))
-       (list :who       (car split))
-       (list :action    (cadr split))
-
-       (list :nick      (after (delim (car split) #\!) #\:))
-       (list :host      (after (car split) #\@)))
-     ))
+     (hashmap
+       :channel   (list-ref split 2)
+       :message   (after (after msg #\:) #\:)
+       :who       (car split)
+       :action    (cadr split)
+       :nick      (after (delim (car split) #\!) #\:)
+       :host      (after (car split) #\@))))
 
 (define irc-field
   (lambda (msg val)
-    (list->string (assq val msg))))
+    (list->string (msg val))))
 
 (define irc-replyto
   (lambda (msg)
-    (if (eq? (car (assq :channel msg)) #\#)
-      (list->string (assq :channel msg))
-      (list->string (assq :nick msg)))))
+    (if (eq? (car (msg :channel)) #\#)
+      (list->string (msg :channel))
+      (list->string (msg :nick)))))
 
 (define str-concat
   (lambda (xs)
@@ -82,7 +82,7 @@
 
         (list ",command_test"
               (lambda (msg)
-                (define args (list-split (after (assq :message msg) #\ ) #\ ))
+                (define args (list-split (after (msg :message) #\ ) #\ ))
 
                 (irc-privmsg serv (irc-replyto msg)
                              "Testing, systems be nominal. Args list: ")
@@ -95,7 +95,7 @@
               (lambda (msg)
                 (irc-privmsg serv (irc-replyto msg)
                              (string-append "Hey there, your host is "
-                                            (list->string (assq :host msg))))))
+                                            (list->string (msg :host))))))
 
         (list ",maw"
               (lambda (msg)
@@ -111,35 +111,47 @@
                             "VERSION I'm an irc bot")))
         ))
 
+(define loop-iter
+  (lambda ()
+    (define cont? #t)
 
-(foreach [iterator ident] ; loop forever, generates an infinite list
-  (lambda (n)
-    (define message (until #\return tcp-getchar (assq :socket (cdr serv))))
-    (tcp-getchar (assq :socket (cdr serv))) ; just ignore the newline character
-    (map display (list "message " n ": "))
+    (hashmap :iter (iterator ident
+                       (lambda (cur n)
+                         (cont? cur '())))
 
-    (if (equal? (take message 4) (str-iter "PING"))
-      (begin
-        (display "[ ] Got ping: ")
-        (print message)
-        (irc-rawmsg serv (list->string (list-replace message #\I #\O))))
+             :stop (lambda ()
+                     (define cont? #f)))))
 
-      (begin
-        (define parsed (parse-irc-message message))
+  (define main-loop (loop-iter))
 
-        (display "    ")
-        (map display (list (list->string (assq :nick parsed))
-                           "@"
-                           (list->string (assq :host parsed))
-                           ": "
-                           (list->string (assq :action parsed))))
-        (print "")
+  (foreach [main-loop :iter]
+    (lambda (n)
+      (define message (until #\return tcp-getchar (assq :socket (cdr serv))))
+      (tcp-getchar (assq :socket (cdr serv))) ; just ignore the newline character
+      (map display (list "message " n ": "))
 
-        (if (not (null? (assq :message parsed)))
-          (foreach command-list
-                   (lambda (command)
-                     (if (equal? (map ident (str-iter (car command)))
-                                 (take (assq :message parsed) (string-length (car command))))
-                       ((cadr command) parsed)
-                       'uwot)))
-          'm8)))))
+      (if (equal? (take message 4) (str-iter "PING"))
+        (begin
+          (display "[ ] Got ping: ")
+          (print message)
+          (irc-rawmsg serv (list->string (list-replace message #\I #\O))))
+
+        (begin
+          (define parsed (parse-irc-message message))
+
+          (display "    ")
+          (map display (list (list->string (parsed :nick))
+                             "@"
+                             (list->string (parsed :host))
+                             ": "
+                             (list->string (parsed :action))))
+          (print "")
+
+          (if (not (null? (parsed :message)))
+            (foreach command-list
+                     (lambda (command)
+                       (if (equal? (map ident (str-iter (car command)))
+                                   (take (parsed :message) (string-length (car command))))
+                         ((cadr command) parsed)
+                         'uwot)))
+            'm8)))))
