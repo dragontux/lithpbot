@@ -16,54 +16,46 @@
 ;;    port: The TCP port of the server to connect to.
 ;;  config: List of config parameters, defined in main.scm.
 (define irc-connect
-  (lambda (host port config)
-    (define sock (tcp-socket host port))
+  (lambda (config)
+    (define sock (tcp-socket (config :server) (config :port)))
     (define nick (config :nick))
 
-    (list 'irc-server
-          (list :socket sock)
-          (list :config config))))
+    (hashmap
+      :config    config
+      :socket    sock
+      :loop      (loop-iter)
 
-(define irc-user
-  (lambda (serv nick)
-    (tcp-sendstrings (assq :socket (cdr serv))
-      (list "USER " nick " " nick " " nick " :" nick crlf))))
+      :user      (lambda (nick)
+                   (tcp-sendstrings sock
+                                    (list "USER " nick " " nick " " nick " :" nick crlf)))
 
-(define irc-nick
-  (lambda (serv nick)
-    (tcp-sendstrings (assq :socket (cdr serv))
-      (list "NICK " nick crlf))))
+      :nick      (lambda (nick)
+                   (tcp-sendstrings sock
+                                    (list "NICK " nick crlf)))
 
-(define irc-privmsg
-  (lambda (serv whom str)
-    (tcp-sendstrings (assq :socket (cdr serv))
-      (list "PRIVMSG " whom " :" str crlf))))
+      :privmsg   (lambda (whom str)
+                   (tcp-sendstrings sock
+                                    (list "PRIVMSG " whom " :" str crlf)))
 
-(define irc-notice
-  (lambda (serv whom str)
-    (tcp-sendstrings (assq :socket (cdr serv))
-      (list "NOTICE " whom " :" str crlf))))
+      :notice    (lambda (whom str)
+                   (tcp-sendstrings sock
+                                    (list "NOTICE " whom " :" str crlf)))
 
-(define irc-join
-  (lambda (serv channel)
-    (tcp-sendstrings (assq :socket (cdr serv))
-      (list "JOIN " channel crlf))))
+      :join      (lambda (channel)
+                   (tcp-sendstrings sock
+                                    (list "JOIN " channel crlf)))
 
-(define irc-part
-  (lambda (serv channel)
-    (tcp-sendstrings (assq :socket (cdr serv))
-      (list "PART " channel crlf))))
+      :part      (lambda (channel)
+                   (tcp-sendstrings sock
+                                    (list "PART " channel crlf)))
 
-(define irc-quit
-  (lambda (serv)
-    (tcp-sendstrings (assq :socket (cdr serv))
-      (list "QUIT :foo" crlf))))
+      :quit      (lambda ()
+                   (tcp-sendstrings sock
+                                    (list "QUIT :foo" crlf)))
 
-(define irc-rawmsg
-  (lambda (serv str)
-    (tcp-writestr (assq :socket (cdr serv)) str)
-    (tcp-writestr (assq :socket (cdr serv)) crlf)
-    ))
+      :rawmsg    (lambda (str)
+                   (tcp-writestr sock str)
+                   (tcp-writestr sock crlf)))))
 
 ;; Test whether a some thing is an irc server.
 ;; Returns a boolean which is true if it is a server, false otherwise.

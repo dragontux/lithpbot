@@ -100,3 +100,14 @@
 (define ident
   (lambda (x)
     x))
+
+(define loop-iter
+  (lambda ()
+    (define cont? #t)
+
+    (hashmap :iter (iterator ident
+                       (lambda (cur n)
+                         (cont? cur '())))
+
+             :stop (lambda ()
+                     (define cont? #f)))))
