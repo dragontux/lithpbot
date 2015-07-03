@@ -10,11 +10,11 @@
       (begin
         (define cmds
           (hashmap
-            "join" (lambda () ((serv :join) (list->string (cadr args))))
-            "part" (lambda () ((serv :part) (list->string (cadr args))))
-            "quit" (lambda () ((serv :quit)
-                              (((serv :loop) :stop))))
-            "say"  (lambda () ((serv :privmsg) (list->string (cadr args))
+            "join" (lambda () ((server :join) (list->string (cadr args))))
+            "part" (lambda () ((server :part) (list->string (cadr args))))
+            "quit" (lambda () ((server :quit)
+                              (((server :loop) :stop))))
+            "say"  (lambda () ((server :privmsg) (list->string (cadr args))
                                 (str-concat (map
                                   (lambda (s)
                                     (string-append (list->string s) " "))
@@ -23,7 +23,7 @@
         (if (not (eq? (cmds command) #f))
           ((cmds command))
          else
-          ((serv :privmsg) (irc-replyto msg) "Dunno what that is man")))
+          ((server :privmsg) (irc-replyto msg) "Dunno what that is man")))
      else
-      ((serv :privmsg) (irc-replyto msg) "What, no"))))
+      ((server :privmsg) (irc-replyto msg) "What, no"))))
 

@@ -16,24 +16,23 @@
 (print "hello, world!")
 (print "[ ] Starting irc bot.")
 
-(define serv (irc-connect config))
+(define server (irc-connect config))
 
-((serv :user) (config :nick))
-((serv :nick) (config :nick))
+((server :user) (config :nick))
+((server :nick) (config :nick))
 
 (print "[ ] Connected to server.")
-(display "[ ] Have server: ") (print serv)
+(display "[ ] Have server: ") (print server)
 
-;(irc-privmsg serv "NickServ" "identify shitpass")
-((serv :privmsg) "NickServ"
+((server :privmsg) "NickServ"
              (string-append "identify " (readall (open "./passfile" "r"))))
 (foreach [iota 5] intern-sleep)
 
 (foreach (config :channels)
   (lambda (chan)
     (display "[ ] Joining ") (print chan)
-    ;(irc-join serv chan)))
-    ((serv :join) chan)))
+    ;(irc-join server chan)))
+    ((server :join) chan)))
 
 (define parse-irc-message
   (lambda (msg)
@@ -66,15 +65,15 @@
 (define command-list
   (list (list ".bots"
               (lambda (msg)
-                ((serv :privmsg) (irc-replyto msg) "Reporting in! [4Scheme] try ,help")))
+                ((server :privmsg) (irc-replyto msg) "Reporting in! [4Scheme] try ,help")))
 
         (list ",source"
               (lambda (msg)
-                ((serv :privmsg) (irc-replyto msg) "[todo] insert source link here")))
+                ((server :privmsg) (irc-replyto msg) "[todo] insert source link here")))
 
         (list ",help"
               (lambda (msg)
-                ((serv :privmsg) (irc-replyto msg)
+                ((server :privmsg) (irc-replyto msg)
                              (str-concat
                                (list (irc-field msg :nick) ": sorry, I don't have a help command at the moment...")))))
 
@@ -82,22 +81,22 @@
               (lambda (msg)
                 (define args (list-split (after (msg :message) #\ ) #\ ))
 
-                ((serv :privmsg) (irc-replyto msg)
+                ((server :privmsg) (irc-replyto msg)
                              "Testing, systems be nominal. Args list: ")
 
                 (foreach args
                   (lambda (arg)
-                    ((serv :privmsg) (irc-replyto msg) (list->string arg))))))
+                    ((server :privmsg) (irc-replyto msg) (list->string arg))))))
 
         (list ",whoami"
               (lambda (msg)
-                ((serv :privmsg) (irc-replyto msg)
+                ((server :privmsg) (irc-replyto msg)
                              (string-append "Hey there, your host is "
                                             (list->string (msg :host))))))
 
         (list ",maw"
               (lambda (msg)
-                ((serv :privmsg) (irc-replyto msg)
+                ((server :privmsg) (irc-replyto msg)
                              (str-concat
                                (list (irc-field msg :nick) ": marf \\(^~^ )7")))))
 
@@ -105,7 +104,7 @@
 
         (list "VERSION"
               (lambda (msg)
-                ((serv :privmsg) (irc-field msg :nick)
+                ((server :privmsg) (irc-field msg :nick)
                             "VERSION I'm an irc bot")))
         ))
 
@@ -126,17 +125,17 @@
      else
       '())))))
 
-(foreach [[serv :loop] :iter]
+(foreach [[server :loop] :iter]
          (lambda (n)
-           (define message (until #\return tcp-getchar (serv :socket)))
-           (tcp-getchar (serv :socket)) ; just ignore the newline character
+           (define message (until #\return tcp-getchar (server :socket)))
+           (tcp-getchar (server :socket)) ; just ignore the newline character
            (map display (list "message " n ": "))
 
            (if (equal? (take message 4) (str-iter "PING"))
              (begin
                (display "[ ] Got ping: ")
                (print message)
-               ((serv :rawmsg) (list->string (list-replace message #\I #\O))))
+               ((server :rawmsg) (list->string (list-replace message #\I #\O))))
 
              (begin
                (define parsed (parse-irc-message message))
