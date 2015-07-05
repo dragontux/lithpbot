@@ -111,3 +111,8 @@
 
              :stop (lambda ()
                      (define cont? #f)))))
+
+(define infix (lambda (a op b) (op a b)))
+
+(define first (lambda (xs) (list-ref xs 0)))
+(define second (lambda (xs) (list-ref xs 0)))
