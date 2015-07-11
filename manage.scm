@@ -2,7 +2,7 @@
 
 (define bot-manage
   (lambda (msg)
-    (define args (list-split (after (msg :message) #\ ) #\ ))
+    (define args (list-split (after (msg :message) #\space) #\space))
     (define command (list->string (car args)))
 
     (if (and (eq? (irc-field msg :nick) "trezz")
@@ -10,11 +10,12 @@
       (begin
         (define cmds
           (hashmap
-            "join" (lambda () ((server :join) (list->string (cadr args))))
-            "part" (lambda () ((server :part) (list->string (cadr args))))
-            "quit" (lambda () ((server :quit)
-                              (((server :loop) :stop))))
-            "say"  (lambda () ((server :privmsg) (list->string (cadr args))
+            "join"  (lambda () ((server :join) (list->string (cadr args))))
+            "debug" (lambda () (debug-break))
+            "part"  (lambda () ((server :part) (list->string (cadr args))))
+            "quit"  (lambda () ((server :quit)
+                               (((server :loop) :stop))))
+            "say"   (lambda () ((server :privmsg) (list->string (cadr args))
                                 (str-concat (map
                                   (lambda (s)
                                     (string-append (list->string s) " "))

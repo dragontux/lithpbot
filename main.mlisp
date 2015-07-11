@@ -1,6 +1,7 @@
 #!/usr/bin/env gojira
 
-import! 'lists
+map import! ' : lists
+              . math
 
 ; todo: move this to seperate configuration file
 define config : hashmap
@@ -37,7 +38,7 @@ foreach [config :channels] : func [chan]
     [server :join] chan
 
 define parse-irc-message : func [msg]
-     define split : list-split msg #\ 
+     define split : list-split msg #\space
      hashmap
        . :channel : list-ref split 2
        . :message : after (after msg #\:) #\:
@@ -58,43 +59,73 @@ define str-concat : func [xs]
       . ""
       string-append (car xs) : str-concat (cdr xs)
 
+define irc-reply : func [msg str]
+    [server :privmsg] [irc-replyto msg] str
+
 define command-list
   list 
     list ".bots"         : func [msg]
-                            [server :privmsg] [irc-replyto msg]
-                                . "Reporting in! [4Scheme] try ,help"
+                            irc-reply msg ; "Reporting in! [4Scheme] try ,help"
+                                . "Reporting in! [Scheme] try ,help"
 
     list ",source"       : func [msg]
-                            [server :privmsg] (irc-replyto msg)
-                                . "[todo] insert source link here"
+                            irc-reply msg "[todo] insert source link here"
 
     list ",help"         : func [msg]
-                            [server :privmsg] (irc-replyto msg)
-                                str-concat : list (irc-field msg :nick)
-                                    . ": sorry, I don't have a help command at the moment..."
+                            irc-reply msg : str-concat : list (irc-field msg :nick)
+                                      . ": sorry, I don't have a help command at the moment..."
 
     list ",whoami"       : func [msg]
-                            [server :privmsg] (irc-replyto msg)
-                                string-append "Hey there, your host is " : list->string : msg :host
+                            irc-reply msg : string-append
+                                      . "Hey there, your host is "
+                                        list->string : msg :host
 
     list ",maw"          : func [msg]
-                            [server :privmsg] (irc-replyto msg)
-                                str-concat : list (irc-field msg :nick) ": marf \\(^~^ )7"
+                            irc-reply msg : str-concat
+                                list (irc-field msg :nick) ": marf \\(^~^ )7"
 
     list ",manage"         bot-manage
+
+    list ",quote"        : func [msg]
+                            define split : map list->string : list-split [msg :message] #\space
+
+                            if (infix (length split) > 1)
+                                begin
+                                    define nick (list-ref split 1)
+                                    if (exists? (string-append "logdir/" nick))
+                                        begin
+                                            define logs (read (open (string-append "logdir/" nick) "r"))
+                                            irc-reply msg : str-concat
+                                                list (irc-field msg :nick) ": " (list-ref (random_choice logs) 3)
+                                        irc-reply msg : str-concat : list (irc-field msg :nick) ": I haven't seen them, sry"
+                                irc-reply msg : str-concat : list (irc-field msg :nick) ": Usage: ,quote [nick]"
 
     list "VERSION"   : func [msg]
                             [server :notice] (irc-field msg :nick)
                                 . "VERSION I'm an irc bot"
 
-define filter : func [xs sieve]
-    if (null? xs)
-        . '()
-        if (sieve xs)
-            cons (car xs) : filter (cdr xs) sieve
-            filter (cdr xs) sieve
-
 define ping? : func [xs] : equal? (take xs 4) (str-iter "PING")
+
+;define log-file : open "/tmp/irc-log", "w"
+
+define write : func [f x]
+    display x f
+    newline f
+
+define irc-log-msg : func [msg]
+    write log-file : map list->string : list
+                   . [msg :nick] [msg :host] [msg :channel] [msg :message]
+
+define irc-log-msg-file : func [f msg]
+    write f : map list->string : list
+            . [msg :nick] [msg :host] [msg :channel] [msg :message]
+
+if (not (exists? "logdir"))
+    mkdir "logdir"
+    . '()
+
+define str-strip : func [tokens str]
+    list->string : filter (func [c] (not (member? c tokens))) : str-iter str
 
 foreach [[server :loop] :iter] : func [n]
     define message : until #\return tcp-getchar : server :socket
@@ -108,7 +139,10 @@ foreach [[server :loop] :iter] : func [n]
 
         begin
             define msg [parse-irc-message message]
-            define split : map list->string : list-split [msg :message] #\ 
+            define split : map list->string : list-split [msg :message] #\space
+            define wut : open (string-append "logdir/" (list->string [msg :nick])) "a"
+
+            irc-log-msg-file wut msg
 
             foreach command-list : func [cmd]
                 if (infix [first cmd] = [first split])
@@ -116,3 +150,4 @@ foreach [[server :loop] :iter] : func [n]
                    . '()
 
             print : [parse-irc-message message] :action
+    ident '()

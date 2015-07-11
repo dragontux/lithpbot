@@ -116,3 +116,15 @@
 
 (define first (lambda (xs) (list-ref xs 0)))
 (define second (lambda (xs) (list-ref xs 0)))
+
+(define seed 2252)
+
+(define random (lambda ()
+    (define seed (* (+ seed 1) 33))
+    seed))
+
+(define random_int (lambda (range)
+    (modulo (random) range)))
+
+(define random_choice (lambda (xs)
+    (list-ref xs (random_int (length xs)))))
