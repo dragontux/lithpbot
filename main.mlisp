@@ -15,17 +15,15 @@ map load! ' : "misc.scm"
             . "manage.scm"
 
 print "hello, world!"
-
 print "[ ] Starting irc bot."
 
 define server : irc-connect config
 
-begin
-    [server :user] : config :nick
-    [server :nick] : config :nick
-    print "[ ] Connected to server."
-    display "[ ] Have server: "
-    print server
+[server :user] : config :nick
+[server :nick] : config :nick
+print "[ ] Connected to server."
+display "[ ] Have server: "
+print server
 
 [server :privmsg] "NickServ"
        string-append "identify " : readall : open "./passfile" "r"

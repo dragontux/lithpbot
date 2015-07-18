@@ -2,16 +2,6 @@
 ; all of these should probably be moved into proper modules
 ; at some point.
 ;
-(define foreach)
-(define foreach
-  (lambda (xs f)
-    (if (null? xs)
-      '()
-      (begin
-        (f (car xs))
-        (foreach (cdr xs) f)))))
-
-
 (define until
   (lambda (token f arg)
     (define c (f arg))
@@ -45,49 +35,9 @@
      else
       (eq? xs ys))))
 
-(define list-replace
-  (lambda (xs old new)
-    (if (null? xs)
-      '()
-    (if (eq? (car xs) old)
-      (cons new (list-replace (cdr xs) old new))
-     else
-      (cons (car xs) (list-replace (cdr xs) old new))))))
-
-(define delim
-  (lambda (xs token)
-    (if (null? xs)
-      '()
-    (if (eq? (car xs) token)
-      '()
-      (cons (car xs) (delim (cdr xs) token))))))
-
-(define after
-  (lambda (xs token)
-    (if (null? xs)
-      '()
-    (if (eq? (car xs) token)
-      (cdr xs)
-     else
-      (after (cdr xs) token)))))
-
-(define list-split
-  (lambda (xs token)
-    (if (null? xs)
-      '()
-      (cons (delim xs token) (list-split (after xs token) token)))))
-
 (define string-split
   (lambda (str token)
     (map list->string (list-split (str-iter str) token))))
-
-(define list-ref
-  (lambda (xs n)
-    (if (null? xs)
-      '()
-    (if (eq? n 0)
-      (car xs)
-      (list-ref (cdr xs) (- n 1))))))
 
 (define cadr
   (lambda (xs)
@@ -103,7 +53,7 @@
 
 (define loop-iter
   (lambda ()
-    (define cont? #t)
+    (define :mut cont? #t)
 
     (hashmap :iter (iterator ident
                        (lambda (cur n)
@@ -117,7 +67,7 @@
 (define first (lambda (xs) (list-ref xs 0)))
 (define second (lambda (xs) (list-ref xs 0)))
 
-(define seed 2252)
+(define :mut seed 2252)
 
 (define random (lambda ()
     (define seed (* (+ seed 1) 33))
