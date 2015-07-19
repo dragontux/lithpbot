@@ -60,6 +60,24 @@ define str-concat : func [xs]
 define irc-reply : func [msg str]
     [server :privmsg] [irc-replyto msg] str
 
+define string-strip : func [str chars]
+    list->string : filter
+        func [c] : not : member? c chars
+        str-iter str
+
+define return ident
+
+define get_nick_quote : func [args]
+    if (infix (length args) > 1)
+        begin
+            define nick : string-strip (list-ref args 1) '(#\. #\/)
+            if (exists? (string-append "logdir/" nick))
+                begin
+                    define logs : read : open (string-append "logdir/" nick) "r"
+                    list-ref (random_choice logs) 3
+                return "I haven't seen them, sry"
+        return "Usage: ,quote [nick]"
+
 define command-list
   list 
     list ".bots"         : func [msg]
@@ -67,11 +85,18 @@ define command-list
                                 . "Reporting in! [Scheme] try ,help"
 
     list ",source"       : func [msg]
-                            irc-reply msg "[todo] insert source link here"
+                            irc-reply msg : str-concat
+                               list [irc-field msg :nick] ": https://github.com/dragontux/lithpbot"
 
     list ",help"         : func [msg]
-                            irc-reply msg : str-concat : list (irc-field msg :nick)
-                                      . ": sorry, I don't have a help command at the moment..."
+                            irc-reply msg : str-concat
+                                cons [irc-field msg :nick] : cons ": my commands are: "
+                                    map
+                                        func [str]
+                                            if (eq? (string-ref (car str) 0) #\,)
+                                                string-append (car str) " "
+                                                . ""
+                                        ident command-list
 
     list ",whoami"       : func [msg]
                             irc-reply msg : string-append
@@ -86,25 +111,14 @@ define command-list
 
     list ",quote"        : func [msg]
                             define split : map list->string : list-split [msg :message] #\space
-
-                            if (infix (length split) > 1)
-                                begin
-                                    define nick (list-ref split 1)
-                                    if (exists? (string-append "logdir/" nick))
-                                        begin
-                                            define logs (read (open (string-append "logdir/" nick) "r"))
-                                            irc-reply msg : str-concat
-                                                list (irc-field msg :nick) ": " (list-ref (random_choice logs) 3)
-                                        irc-reply msg : str-concat : list (irc-field msg :nick) ": I haven't seen them, sry"
-                                irc-reply msg : str-concat : list (irc-field msg :nick) ": Usage: ,quote [nick]"
+                            irc-reply msg : str-concat
+                                list [irc-field msg :nick] ": " [get_nick_quote split]
 
     list "VERSION"   : func [msg]
                             [server :notice] (irc-field msg :nick)
                                 . "VERSION I'm an irc bot"
 
 define ping? : func [xs] : equal? (take xs 4) (str-iter "PING")
-
-;define log-file : open "/tmp/irc-log", "w"
 
 define write : func [f x]
     display x f

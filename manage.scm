@@ -3,11 +3,12 @@
 (define bot-manage
   (lambda (msg)
     (define args (list-split (after (msg :message) #\space) #\space))
-    (define command (list->string (car args)))
 
-    (if (and (eq? (irc-field msg :nick) "trezz")
-             (eq? (irc-field msg :host) "the.innernet"))
+    (if (and (and (eq? (irc-field msg :nick) "trezz")
+                  (eq? (irc-field msg :host) "the.innernet"))
+                  (> (length args) 0))
       (begin
+        (define command (list->string (car args)))
         (define cmds
           (hashmap
             "join"  (lambda () ((server :join) (list->string (cadr args))))
