@@ -2,12 +2,11 @@
 ; all of these should probably be moved into proper modules
 ; at some point.
 ;
-(define until
-  (lambda (token f arg)
-    (define c (f arg))
-    (if (eq? c token)
-      '()
-      (cons c (until token f arg)))))
+(define (until token f arg)
+  (define c (f arg))
+  (if (eq? c token)
+    '()
+    (cons c (until token f arg))))
 
 ; todo: move to 'strings module
 (define str-iter
@@ -23,8 +22,7 @@
       (lambda (c)
         (tcp-putchar sock c)))))
 
-(define equal?
-  (lambda (xs ys)
+(define (equal? xs ys)
     (if (list? xs)
       (or (and (null? xs) (null? ys))
         (and (and (and
@@ -33,19 +31,11 @@
           (equal? (car xs) (car ys)))
           (equal? (cdr xs) (cdr ys))))
      else
-      (eq? xs ys))))
+      (eq? xs ys)))
 
 (define string-split
   (lambda (str token)
     (map list->string (list-split (str-iter str) token))))
-
-(define cadr
-  (lambda (xs)
-    (car (cdr xs))))
-
-(define cddr
-  (lambda (xs)
-    (cdr (cdr xs))))
 
 (define ident
   (lambda (x)
