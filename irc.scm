@@ -50,3 +50,33 @@
                    (tcp-writestr sock str)
                    (tcp-writestr sock crlf)))))
 
+(define (irc-log-msg msg)
+  (irc-log-msg-file log-file))
+
+(define (irc-log-msg-file f msg)
+    (write (map list->string (map msg '(:nick :host :channel :message)))
+           f))
+
+(define (ping? xs)
+  (equal? (take xs 4) (str-iter "PING")))
+
+(define irc-field (lambda [msg val] (list->string [msg val])))
+
+(define (irc-replyto msg)
+  (if (eq? (car (msg :channel)) #\#)
+    (list->string [msg :channel])
+    (list->string [msg :nick])))
+
+(define (parse-irc-message msg)
+  (let ((split (list-split msg #\space)))
+    (hashmap
+      :channel  (let ((chan (list-ref split 2)))
+                      (if (eq? (car chan) #\:)
+                        (cdr chan)
+                        chan))
+      :message  (after (after msg #\:) #\:)
+      :who      (car split)
+      :action   (cadr split)
+      :nick     (after (delim (car split) #\!) #\:)
+      :host     (after (car split) #\@))))
+

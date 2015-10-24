@@ -1,4 +1,5 @@
 (import! 'lists)
+(import! 'strings)
 
 (define bot-manage
   (lambda (msg)
@@ -17,7 +18,7 @@
               "quit"  (lambda () ((server :quit)
                                  (((server :loop) :stop))))
               "say"   (lambda () ((server :privmsg) (list->string (cadr args))
-                                  (str-concat (map
+                                  (string-concat (map
                                     (lambda (s)
                                       (string-append (list->string s) " "))
                                     (cddr args))))))))

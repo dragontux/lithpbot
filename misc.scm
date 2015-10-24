@@ -8,13 +8,6 @@
     '()
     (cons c (until token f arg))))
 
-; todo: move to 'strings module
-(define str-iter
-  (lambda (str)
-    (iterator
-      (lambda (n) (string-ref str n))
-      (string-length str))))
-
 ; todo: move this to dedicated 'sockets module
 (define tcp-writestr
   (lambda (sock str)
