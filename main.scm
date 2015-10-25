@@ -13,10 +13,9 @@
 (map load! '("misc.scm"
              "irc.scm"
              "hooks.scm"
-             "manage.scm"))
+             "commands.scm"))
 
-(print "hello, world!")
-(print "[ ] Starting irc bot.")
+(print "[ ] Starting lithpbot.")
 
 (define server (irc-connect config))
 
@@ -34,62 +33,8 @@
         (lambda (c) (not (member? c chars)))
         (str-iter str))))
 
-(define return ident)
-
-(define (get_nick_quote args)
-  (if (infix (length args) > 1)
-
-    (let ((nick (string-strip (list-ref args 1) '(#\. #\/))))
-      (if (exists? (string-append "logdir/" nick))
-        (let ((logs (read (open (string-append "logdir/" nick) "r"))))
-          (list-ref (random_choice logs) 3))
-       else
-         "I haven't seen them, sry"))
-   else
-     "Usage: ,quote [nick]"))
-
-(define command-list
-  (list 
-    (list ".bots"         (lambda [msg]
-                            (irc-reply msg ;"Reporting in! [Scheme] try ,help"
-                                "Reporting in! [4Scheme] try ,help")))
-
-    (list ",source"       (lambda [msg]
-                            (irc-reply msg (string-concat
-                               (list [irc-field msg :nick] ": https://github.com/dragontux/lithpbot")))))
-
-    (list ",help"         (lambda [msg]
-                            (irc-reply msg (string-concat
-                                (cons [irc-field msg :nick] (cons ": my commands are: "
-                                    (map
-                                        (lambda [str]
-                                            (if (eq? (string-ref (car str) 0) #\,)
-                                                (string-append (car str) " ")
-                                                ""))
-                                        command-list)))))))
-
-    (list ",whoami"       (lambda [msg]
-                            (irc-reply msg (string-append
-                                      "Hey there, your host is "
-                                      (list->string [msg :host])))))
-
-    (list ",maw"          (lambda [msg]
-                            (irc-reply msg (string-concat
-                                (list (irc-field msg :nick) ": marf \\(^~^ )7")))))
-
-    (list ",manage"       bot-manage)
-
-    (list ",quote"        (lambda [msg]
-                             (let ((split (map list->string
-                                               (list-split [msg :message] #\space))))
-                               (irc-reply msg (string-concat
-                                                (list [irc-field msg :nick]
-                                                      ": "
-                                                      [get_nick_quote split]))))))
-
-    (list "VERSION"   (lambda [msg]
-                            ([server :notice] (irc-field msg :nick)
-                                "VERSION I'm an irc bot")))))
+(map load-command! '("manage"  "quote" "help"   "maw"
+                     "version" "bots"  "whoami" "source"))
 
 (if (not (exists? "logdir"))
     (mkdir "logdir")
@@ -111,22 +56,23 @@
       (print chan)
       ([serv :join] chan))))
 
-(define (handle-command msg)
-  (foreach command-list
-     (lambda (cmd)
-       (if (infix [first cmd] = [first split])
-         ([cadr cmd] msg)
-        else
-         '()))))
+(define :mut did-initial? #f)
+
+(define (handle-end-of-motd msg)
+  (if (not did-initial?)
+    (begin
+      (do-initial server)
+      (define did-initial? #t))
+    '()))
 
 (define (greet-user msg)
   (if (not (eq? [irc-field msg :nick] [config :nick]))
     (irc-reply msg (concat "Hey there, " [irc-field msg :nick]))
     '()))
 
-(define :mut did-initial? #f)
 (add-hook! "PRIVMSG" handle-command)
-(add-hook! "JOIN"    greet-user)
+;(add-hook! "JOIN"    greet-user)
+(add-hook! "376"     handle-end-of-motd)
 
 (foreach [[server :loop] :iter]
   (lambda (n)
@@ -137,21 +83,14 @@
       (if (ping? message)
         (begin
           (print "Got ping")
-          ([server :rawmsg] (list->string (list-replace message #\I #\O)))
-
-          ; wait for initial ping
-          (if (not did-initial?)
-            (begin
-              (do-initial server)
-              (define did-initial? #t))
-            '()))
+          ([server :rawmsg] (list->string (list-replace message #\I #\O))))
 
        else
         (let ((msg (parse-irc-message message))
               (split (map list->string (list-split [msg :message] #\space)))
               (wut (open (string-append "logdir/" (list->string [msg :nick])) "a")))
 
-          (handle-hook msg)
+          (print (map list->string (map msg '(:action :channel :nick :message))))
           (irc-log-msg-file wut msg)
-          (print (map list->string (map msg '(:action :channel :nick :message)))) ))
+          (handle-hook msg)))
       '())))
